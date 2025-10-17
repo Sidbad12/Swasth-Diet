@@ -6,7 +6,7 @@ import { Camera, MessageCircle, User, Scale, Target, Heart, ChevronRight, Menu, 
 const API_KEY = ""; 
 const GEMINI_MODEL = 'gemini-2.5-flash-preview-09-2025';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`;
-const API_URL = '/api'; 
+const API_URL = 'https://swasth-diet.onrender.com'; 
 
 const indianRegions = [
     'North India', 'South India', 'East India', 'West India', 'Northeast India', 'Central India'
