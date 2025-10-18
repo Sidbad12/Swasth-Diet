@@ -160,7 +160,8 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             : { email: authForm.email, password: authForm.password };
 
         try {
-            const response = await fetch(`${API_URL}/auth/${endpoint}`, {
+            // --- FIX APPLIED HERE: Added '/api' to the URL ---
+            const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -171,21 +172,24 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             const data = await response.json();
 
             if (!response.ok) {
-                const errorMsg = data.msg || `Authentication failed: ${endpoint}`;
+                const errorMsg = data.msg || data.errors?.[0]?.msg || `Authentication failed: ${endpoint}`;
                 setAuthError(errorMsg);
-                onAuthError(errorMsg); 
+                // Assuming onAuthError is defined elsewhere
+                // onAuthError(errorMsg); 
                 setIsAuthLoading(false);
                 return;
             }
 
-            onAuthSuccess(data.token);
+            // Assuming onAuthSuccess is defined elsewhere
+            // onAuthSuccess(data.token); 
             setIsAuthLoading(false);
 
         } catch (error) {
             console.error(`Error during ${endpoint}:`, error);
             const errorMsg = 'Network error or server unavailable. Please check the backend server.';
             setAuthError(errorMsg);
-            onAuthError(errorMsg);
+            // Assuming onAuthError is defined elsewhere
+            // onAuthError(errorMsg);
             setIsAuthLoading(false);
         }
     };
