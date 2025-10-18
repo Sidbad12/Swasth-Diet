@@ -265,6 +265,36 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
 };
 
 // --- PROFILE SCREEN (Stable) ---
+const RecipeDetailModal = ({ recipe, onClose }) => {
+  if (!recipe) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">{recipe.name}</h2>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition"
+          >
+            <X size={24} className="text-gray-600" />
+          </button>
+        </div>
+
+        {/* Content - Add all the recipe details here */}
+        <div className="p-6 space-y-6">
+          {/* Image placeholder */}
+          <div className="w-full h-48 bg-gradient-to-br from-green-100 to-orange-100 rounded-xl flex items-center justify-center">
+            <Leaf size={64} className="text-green-500 opacity-50" />
+          </div>
+
+          {/* Ingredients, Instructions, Nutrition - see document for full code */}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProfileScreen = ({ userData, onUpdateSuccess, onUpdateError }) => {
     
@@ -598,11 +628,21 @@ const ProgressSection = ({ weightHistory }) => (
     </div>
 );
 
-const RecipesSection = ({ region, dietPreference }) => (
+const RecipesSection = ({ region, dietPreference }) => {
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+
+  const recipes = [
+    { name: 'Palak Paneer', region: 'North', color: 'green', calories: 280 },
+    { name: 'Masala Dosa', region: 'South', color: 'red', calories: 320 },
+    { name: 'Shorshe Ilish', region: 'East', color: 'yellow', calories: 350 },
+    { name: 'Dhokla', region: 'West', color: 'blue', calories: 180 }
+  ];
+
+  return (
     <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-green-700 mb-6">Regional Recipes</h1>
       <p className="text-gray-600 mb-8">
-        Discover personalized, nutritious recipes tailored to your **{region || 'North Indian'}** region and **{dietPreference || 'Vegetarian'}** preference.
+        Discover personalized, nutritious recipes tailored to your <strong>{region || 'North Indian'}</strong> region and <strong>{dietPreference || 'Vegetarian'}</strong> preference.
       </p>
 
       <div className="space-y-6">
@@ -618,27 +658,37 @@ const RecipesSection = ({ region, dietPreference }) => (
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-                { name: 'Palak Paneer', region: 'North', color: 'green' },
-                { name: 'Masala Dosa', region: 'South', color: 'red' },
-                { name: 'Shorshe Ilish', region: 'East', color: 'yellow' },
-                { name: 'Dhokla', region: 'West', color: 'blue' }
-            ].map((recipe, index) => (
-                <div key={index} className="bg-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 border-l-8 border-gray-100">
-                    <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                        <Leaf size={20} className={`mr-2 text-${recipe.color}-500`}/> {recipe.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">Authentic {recipe.region} Indian Dish</p>
-                    <div className="mt-3 flex justify-between items-center">
-                        <p className="text-xs text-green-600 font-medium">~350 Kcal</p>
-                        <button className="text-sm text-blue-500 hover:text-blue-700 transition">View Recipe &gt;</button>
-                    </div>
-                </div>
-            ))}
+          {recipes.map((recipe, index) => (
+            <div 
+              key={index}
+              onClick={() => setSelectedRecipe(recipe)}
+              className="bg-white p-4 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 border-l-8 border-gray-100 cursor-pointer"
+            >
+              <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                <Leaf size={20} className={`mr-2 text-${recipe.color}-500`}/> {recipe.name}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Authentic {recipe.region} Indian Dish</p>
+              <div className="mt-3 flex justify-between items-center">
+                <p className="text-xs text-green-600 font-medium">~{recipe.calories} Kcal</p>
+                <button className="text-sm text-blue-500 hover:text-blue-700 transition">
+                  View Recipe &gt;
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Recipe Detail Modal */}
+      {selectedRecipe && (
+        <RecipeDetailModal 
+          recipe={selectedRecipe} 
+          onClose={() => setSelectedRecipe(null)} 
+        />
+      )}
     </div>
-);
+  );
+};
 
 const ExpertConsultSection = () => (
     <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -997,7 +1047,8 @@ const SwasthBharatApp = () => {
     </div>
   );
 
-  const ChatSection = () => (
+  const ChatSection = () => {
+  return (
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       <div className="flex-shrink-0 flex items-center p-4 bg-white border-b shadow-sm">
         <button onClick={() => setCurrentPage('home')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full mr-2">
@@ -1009,7 +1060,7 @@ const SwasthBharatApp = () => {
       
       {/* Disclaimer */}
       <div className="flex-shrink-0 p-3 bg-blue-100 text-blue-800 text-xs text-center font-medium border-b border-blue-200">
-        Powered by Gemini: Advice grounded in **Indian Food Composition Tables** and **ICMR-NIN Guidelines**.
+        Powered by Gemini: Advice grounded in <strong>Indian Food Composition Tables</strong> and <strong>ICMR-NIN Guidelines</strong>.
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ minHeight: '50vh' }}>
@@ -1061,12 +1112,18 @@ const SwasthBharatApp = () => {
       <div className="flex-shrink-0 p-4 bg-white border-t">
         <div className="flex items-center space-x-3">
           <input
+            key="chat-input"
             type="text"
             placeholder={isTyping ? "Swasth Assistant is typing..." : "Ask about nutrition, recipes, diet plans..."}
             className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 transition"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleChatSend()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSend();
+              }
+            }}
             disabled={isTyping}
           />
           <button
@@ -1122,24 +1179,7 @@ const SwasthBharatApp = () => {
       `}</style>
     </div>
   );
-
-  // Show loading screen while profile is being fetched
-  if (isProfileLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <svg className="animate-spin h-16 w-16 text-green-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <h2 className="text-xl font-semibold text-gray-700">Loading your profile...</h2>
-          <p className="text-gray-500 mt-2">Please wait</p>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Main Render Function ---
+};
 
   const renderContent = () => {
     switch (currentPage) {
