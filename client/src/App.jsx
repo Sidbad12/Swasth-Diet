@@ -155,9 +155,7 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         setIsAuthLoading(true);
         setAuthError(''); 
 
-        const payload = endpoint === 'register' 
-            ? authForm
-            : { email: authForm.email, password: authForm.password };
+        const payload = authForm; 
 
         try {
             // --- FIX APPLIED HERE: Added '/api' to the URL ---
