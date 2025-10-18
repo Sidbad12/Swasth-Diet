@@ -221,6 +221,8 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
 
             // Success Logic: This is the desired outcome
             console.log(`Authentication successful for ${endpoint}:`, data);
+            console.log('TOKEN RECEIVED:', data.token); // ADD THIS LINE
+            console.log('FULL DATA OBJECT:', JSON.stringify(data)); // ADD THIS LINE
             onAuthSuccess(data);  
 
         } catch (error) {
@@ -807,88 +809,102 @@ const SwasthBharatApp = () => {
 
   // --- Authentication & Profile Fetch Logic ---
 
-  // --- Authentication & Profile Fetch Logic ---
-
-// handleLogout must be defined before fetchUserProfile
-const handleLogout = useCallback(() => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('token');
-  setAuthToken(null);
-  setUserProfile(null);
-  setIsLoggedIn(false);
-  setUserData({
-      name: '', email: '', weight: '', height: '', age: '', gender: '', region: '', healthIssues: [], goal: '', targetWeight: '', activityLevel: '', dietPreference: '', allergies: []
-  });
-  setCurrentPage('auth');
-}, []);
-
-const fetchUserProfile = useCallback(async (token) => {
-  if (!token) return;
-  setIsProfileLoading(true);
-  try {
-    const response = await fetch(`${API_URL}/api/user/profile`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-token': token,
-      },
+  // handleLogout must be defined before fetchUserProfile
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
+    setAuthToken(null);
+    setUserProfile(null);
+    setIsLoggedIn(false);
+    setUserData({
+        name: '', email: '', weight: '', height: '', age: '', gender: '', region: '', healthIssues: [], goal: '', targetWeight: '', activityLevel: '', dietPreference: '', allergies: []
     });
+    setCurrentPage('auth');
+  }, []);
 
-    if (!response.ok) {
-      console.error("Profile fetch failed. Token might be invalid/expired.");
-      handleLogout();
+  const fetchUserProfile = useCallback(async (token) => {
+    if (!token) {
+      console.log('fetchUserProfile called with NO TOKEN');
       return;
     }
-
-    const data = await response.json();
-    setUserProfile(data);
-    setUserData(prev => ({
-      ...prev, 
-      name: data.name,
-      email: data.email,
-      ...data.profile,
-    }));
-    setIsLoggedIn(true);
-    setCurrentPage('home'); 
     
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    handleLogout();
-  } finally {
-    setIsProfileLoading(false);
-  }
-}, [handleLogout]);
+    console.log('fetchUserProfile called with token:', token);
+    console.log('Token length:', token?.length);
+    
+    setIsProfileLoading(true);
+    try {
+      console.log('Fetching profile from:', `${API_URL}/api/user/profile`);
+      console.log('With headers:', { 'Content-Type': 'application/json', 'x-auth-token': token });
+      
+      const response = await fetch(`${API_URL}/api/user/profile`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token,
+        },
+      });
+      
+      console.log('Profile fetch response status:', response.status);
 
-const onAuthSuccess = useCallback((data) => {
-  localStorage.setItem('authToken', data.token);
-  localStorage.setItem('token', data.token); // Keep both for compatibility
-  setAuthToken(data.token);
-  fetchUserProfile(data.token);
-}, [fetchUserProfile]);
+      if (!response.ok) {
+        console.error("Profile fetch failed. Token might be invalid/expired.");
+        handleLogout();
+        return;
+      }
 
-const handleAuthSuccess = (token) => {
-  // Legacy support - if called with just token string
-  onAuthSuccess({ token });
-};
+      const data = await response.json();
+      setUserProfile(data);
+      setUserData(prev => ({
+        ...prev, 
+        name: data.name,
+        email: data.email,
+        ...data.profile,
+      }));
+      setIsLoggedIn(true);
+      setCurrentPage('home'); 
+      
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      handleLogout();
+    } finally {
+      setIsProfileLoading(false);
+    }
+  }, [handleLogout]);
 
-const handleAuthError = (errorMsg) => {
+  const onAuthSuccess = useCallback((data) => {
+    console.log('onAuthSuccess called with:', data);
+    console.log('Token to save:', data.token);
+    
+    localStorage.setItem('authToken', data.token);
+    localStorage.setItem('token', data.token);
+    setAuthToken(data.token);
+    
+    console.log('Token saved. Fetching profile with token:', data.token);
+    fetchUserProfile(data.token);
+  }, [fetchUserProfile]);
+
+  const handleAuthSuccess = (token) => {
+    // Legacy support - if called with just token string
+    onAuthSuccess({ token });
+  };
+
+  const handleAuthError = (errorMsg) => {
     console.error('Auth attempt failed:', errorMsg);
-}
+  }
   
   const handleProfileUpdateSuccess = (updatedData) => {
-      setUserData(prev => ({
-          ...prev,
-          ...updatedData,
-          healthIssues: updatedData.healthIssues,
-          allergies: updatedData.allergies,
-      }));
-      setCurrentPage('home');
+    setUserData(prev => ({
+      ...prev,
+      ...updatedData,
+      healthIssues: updatedData.healthIssues,
+      allergies: updatedData.allergies,
+    }));
+    setCurrentPage('home');
   }
 
   const handleProfileUpdateError = (errorMsg) => {
-      console.error('Profile update failed:', errorMsg);
+    console.error('Profile update failed:', errorMsg);
   }
-
 
   // Session Check on Load
   useEffect(() => {
