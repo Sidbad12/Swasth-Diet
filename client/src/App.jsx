@@ -155,10 +155,34 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         setIsAuthLoading(true);
         setAuthError(''); 
 
+        // Use the full authForm payload for consistency (Fixes the original login 400)
         const payload = authForm; 
+        
+        // 1. Pre-Flight Client-Side Validation
+        if (endpoint === 'register') {
+            if (!payload.name || !payload.email || !payload.password) {
+                setAuthError('Name, Email, and Password are all required for registration.');
+                setIsAuthLoading(false);
+                console.error('REGISTRATION FAILED: Missing required fields.', payload);
+                return;
+            }
+        } else if (endpoint === 'login') {
+            // We still send 'name' (even if empty) in payload to satisfy strict backend, 
+            // but we only require email/password to be filled out by the user.
+            if (!payload.email || !payload.password) {
+                setAuthError('Email and Password are required for login.');
+                setIsAuthLoading(false);
+                console.error('LOGIN FAILED: Missing required fields.', payload);
+                return;
+            }
+        }
+        
+        // 2. CRITICAL LOGGING: See exactly what is being sent to the server.
+        console.log(`--- Auth Request Payload for ${endpoint.toUpperCase()} ---`);
+        console.log(JSON.stringify(payload));
+        console.log('----------------------------------------------------');
 
         try {
-            // --- FIX APPLIED HERE: Added '/api' to the URL ---
             const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: {
@@ -172,25 +196,27 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             if (!response.ok) {
                 const errorMsg = data.msg || data.errors?.[0]?.msg || `Authentication failed: ${endpoint}`;
                 setAuthError(errorMsg);
-                // Assuming onAuthError is defined elsewhere
-                // onAuthError(errorMsg); 
                 setIsAuthLoading(false);
+                
+                // Log the server's response for detailed debugging
+                console.error(`SERVER ERROR (${response.status}) for ${endpoint}:`, data);
+                
                 return;
             }
 
-            // Assuming onAuthSuccess is defined elsewhere
-            // onAuthSuccess(data.token); 
+            // Success Logic: This is where you would handle the token and user data
+            // For example: localStorage.setItem('token', data.token); onAuthSuccess(data.token);
+            
             setIsAuthLoading(false);
 
         } catch (error) {
-            console.error(`Error during ${endpoint}:`, error);
+            console.error(`Network or unexpected error during ${endpoint}:`, error);
             const errorMsg = 'Network error or server unavailable. Please check the backend server.';
             setAuthError(errorMsg);
-            // Assuming onAuthError is defined elsewhere
-            // onAuthError(errorMsg);
             setIsAuthLoading(false);
         }
     };
+
     
     const handlePageSwitch = (page) => {
         setCurrentPage(page);
