@@ -158,17 +158,17 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         // 1. Determine the payload based on the endpoint
         let payload;
         if (endpoint === 'login') {
-            // Only send email and password for login.
+            // Correct payload for login (only email and password)
             payload = {
                 email: authForm.email,
                 password: authForm.password,
             };
         } else {
-            // Send the full form data for registration
+            // Full payload for registration
             payload = authForm;
         }
         
-        // 2. Pre-Flight Client-Side Validation (kept for robustness)
+        // 2. Pre-Flight Client-Side Validation
         if (endpoint === 'register') {
             if (!payload.name || !payload.email || !payload.password) {
                 setAuthError('Name, Email, and Password are all required for registration.');
@@ -185,15 +185,14 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             }
         }
         
-        // 3. CRITICAL LOGGING: See exactly what is being sent to the server.
+        // 3. Logging the payload before sending
         console.log(`--- Auth Request Payload for ${endpoint.toUpperCase()} ---`);
         console.log(JSON.stringify(payload));
         console.log('----------------------------------------------------');
 
         try {
-            // *** CRITICAL CHANGE: Removed '/api' from the URL path. ***
-            // New URL format: ${API_URL}/auth/login or ${API_URL}/auth/register
-            const response = await fetch(`${API_URL}/auth/${endpoint}`, {
+            // *** CRITICAL CHANGE: Reverting to the most common correct path: /api/auth ***
+            const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -201,28 +200,37 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
                 body: JSON.stringify(payload),
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                const errorMsg = data.msg || data.errors?.[0]?.msg || `Authentication failed: ${endpoint}`;
-                setAuthError(errorMsg);
+            // 4. Handle non-JSON responses (like HTML 404 pages) before trying to parse
+            if (!response.ok && response.status === 404) {
+                setAuthError('Authentication endpoint not found (404). Check the API_URL or server paths.');
                 setIsAuthLoading(false);
-                
-                // Log the server's response for detailed debugging
-                console.error(`SERVER ERROR (${response.status}) for ${endpoint}:`, data);
-                
                 return;
             }
 
-            // Success Logic 
+            // 5. Try to parse JSON data
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Handle specific backend validation/error messages
+                const errorMsg = data.msg || data.errors?.[0]?.msg || `Authentication failed: ${endpoint}`;
+                setAuthError(errorMsg);
+                setIsAuthLoading(false);
+                console.error(`SERVER ERROR (${response.status}) for ${endpoint}:`, data);
+                return;
+            }
+
+            // Success Logic: This is the desired outcome
             // onAuthSuccess(data.token);
-            
+            console.log(`Authentication successful for ${endpoint}:`, data);
+            setAuthError(`Success! Please implement onAuthSuccess to proceed.`);
             setIsAuthLoading(false);
 
         } catch (error) {
-            console.error(`Network or unexpected error during ${endpoint}:`, error);
-            const errorMsg = 'Network error or server unavailable. Please check the backend server.';
-            setAuthError(errorMsg);
+            // This catch block will specifically handle the SyntaxError if the response isn't JSON
+            console.error(`Network or unexpected error during ${endpoint}. Could not parse server response:`, error);
+            
+            // This is the user-facing message for a SyntaxError (HTML received instead of JSON)
+            setAuthError('Network error or server unavailable. (Could not read server response.)');
             setIsAuthLoading(false);
         }
     };
