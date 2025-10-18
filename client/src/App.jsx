@@ -765,7 +765,7 @@ const SwasthBharatApp = () => {
 
   const fetchUserProfile = async (token) => {
     try {
-      const response = await fetch(`${API_URL}/user/profile`, {
+      const response = await fetch(`${API_URL}/api/user/profile`, {
         method: 'GET',
         headers: {
           'x-auth-token': token,
