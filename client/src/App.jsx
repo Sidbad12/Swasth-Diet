@@ -220,10 +220,8 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             }
 
             // Success Logic: This is the desired outcome
-            // onAuthSuccess(data.token);
             console.log(`Authentication successful for ${endpoint}:`, data);
-            setAuthError(`Success! Please implement onAuthSuccess to proceed.`);
-            setIsAuthLoading(false);
+            onAuthSuccess(data);  
 
         } catch (error) {
             // This catch block will specifically handle the SyntaxError if the response isn't JSON
@@ -367,7 +365,7 @@ const ProfileScreen = ({ userData, onUpdateSuccess, onUpdateError }) => {
         e.preventDefault();
         setIsLoading(true);
         
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         if (!token) {
             console.error('You must be logged in to update your profile.');
             setIsLoading(false);
@@ -763,7 +761,11 @@ const SettingsSection = () => (
 
 const SwasthBharatApp = () => {
   
-  const [currentPage, setCurrentPage] = useState('auth'); 
+  // Session Management State Variables
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(authToken ? 'dashboard' : 'login'); 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [userData, setUserData] = useState({
@@ -805,44 +807,73 @@ const SwasthBharatApp = () => {
 
   // --- Authentication & Profile Fetch Logic ---
 
-  const fetchUserProfile = async (token) => {
-    try {
-      const response = await fetch(`${API_URL}/api/user/profile`, {
-        method: 'GET',
-        headers: {
-          'x-auth-token': token,
-          'Content-Type': 'application/json',
-        },
-      });
+  // --- Authentication & Profile Fetch Logic ---
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile.');
-      }
+// handleLogout must be defined before fetchUserProfile
+const handleLogout = useCallback(() => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('token');
+  setAuthToken(null);
+  setUserProfile(null);
+  setIsLoggedIn(false);
+  setUserData({
+      name: '', email: '', weight: '', height: '', age: '', gender: '', region: '', healthIssues: [], goal: '', targetWeight: '', activityLevel: '', dietPreference: '', allergies: []
+  });
+  setCurrentPage('auth');
+}, []);
 
-      const user = await response.json();
-      setUserData(prev => ({
-        ...prev, 
-        name: user.name,
-        email: user.email,
-        ...user.profile,
-      }));
-      setIsLoggedIn(true);
-      setCurrentPage('home'); 
-      
-    } catch (error) {
-      console.error('Profile fetch error:', error);
+const fetchUserProfile = useCallback(async (token) => {
+  if (!token) return;
+  setIsProfileLoading(true);
+  try {
+    const response = await fetch(`${API_URL}/api/user/profile`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Profile fetch failed. Token might be invalid/expired.");
       handleLogout();
+      return;
     }
-  };
 
-  const handleAuthSuccess = (token) => {
-    localStorage.setItem('token', token);
-    fetchUserProfile(token);
-  };
-  
-  const handleAuthError = (errorMsg) => {
-      console.error('Auth attempt failed:', errorMsg);
+    const data = await response.json();
+    setUserProfile(data);
+    setUserData(prev => ({
+      ...prev, 
+      name: data.name,
+      email: data.email,
+      ...data.profile,
+    }));
+    setIsLoggedIn(true);
+    setCurrentPage('home'); 
+    
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    handleLogout();
+  } finally {
+    setIsProfileLoading(false);
   }
+}, [handleLogout]);
+
+const onAuthSuccess = useCallback((data) => {
+  localStorage.setItem('authToken', data.token);
+  localStorage.setItem('token', data.token); // Keep both for compatibility
+  setAuthToken(data.token);
+  fetchUserProfile(data.token);
+}, [fetchUserProfile]);
+
+const handleAuthSuccess = (token) => {
+  // Legacy support - if called with just token string
+  onAuthSuccess({ token });
+};
+
+const handleAuthError = (errorMsg) => {
+    console.error('Auth attempt failed:', errorMsg);
+}
   
   const handleProfileUpdateSuccess = (updatedData) => {
       setUserData(prev => ({
@@ -859,23 +890,25 @@ const SwasthBharatApp = () => {
   }
 
 
+  // Session Check on Load
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchUserProfile(token);
-    } else {
+    if (authToken && !userProfile) {
+      // If a token exists but profile isn't loaded (e.g., on app refresh), load it
+      fetchUserProfile(authToken);
+    } else if (!authToken) {
+      // If no token, ensure we are on the auth page
       setCurrentPage('auth');
     }
-  }, []); 
+  }, [authToken, userProfile, fetchUserProfile]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsLoggedIn(false);
-    setUserData({
-        name: '', email: '', weight: '', height: '', age: '', gender: '', region: '', healthIssues: [], goal: '', targetWeight: '', activityLevel: '', dietPreference: '', allergies: []
-    });
-    setCurrentPage('auth');
-  };
+  useEffect(() => {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (token && !authToken) {
+      setAuthToken(token);
+    }
+  }, []);
+
+  
 
   // --- Chat Feature Implementation (Calling the Service) ---
 
@@ -1141,6 +1174,22 @@ const SwasthBharatApp = () => {
       `}</style>
     </div>
   );
+
+  // Show loading screen while profile is being fetched
+  if (isProfileLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <svg className="animate-spin h-16 w-16 text-green-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <h2 className="text-xl font-semibold text-gray-700">Loading your profile...</h2>
+          <p className="text-gray-500 mt-2">Please wait</p>
+        </div>
+      </div>
+    );
+  }
 
   // --- Main Render Function ---
 
