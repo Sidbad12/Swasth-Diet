@@ -155,10 +155,21 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         setIsAuthLoading(true);
         setAuthError(''); 
 
-        // Use the full authForm payload for consistency (Fixes the original login 400)
-        const payload = authForm; 
+        // 1. Determine the payload based on the endpoint
+        let payload;
+        if (endpoint === 'login') {
+            // CRITICAL FIX: Only send email and password for login.
+            // This stops the backend from throwing a 400 error because the 'name' field is empty.
+            payload = {
+                email: authForm.email,
+                password: authForm.password,
+            };
+        } else {
+            // Send the full form data for registration
+            payload = authForm;
+        }
         
-        // 1. Pre-Flight Client-Side Validation
+        // 2. Pre-Flight Client-Side Validation
         if (endpoint === 'register') {
             if (!payload.name || !payload.email || !payload.password) {
                 setAuthError('Name, Email, and Password are all required for registration.');
@@ -167,8 +178,6 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
                 return;
             }
         } else if (endpoint === 'login') {
-            // We still send 'name' (even if empty) in payload to satisfy strict backend, 
-            // but we only require email/password to be filled out by the user.
             if (!payload.email || !payload.password) {
                 setAuthError('Email and Password are required for login.');
                 setIsAuthLoading(false);
@@ -177,12 +186,13 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             }
         }
         
-        // 2. CRITICAL LOGGING: See exactly what is being sent to the server.
+        // 3. CRITICAL LOGGING: See exactly what is being sent to the server.
         console.log(`--- Auth Request Payload for ${endpoint.toUpperCase()} ---`);
         console.log(JSON.stringify(payload));
         console.log('----------------------------------------------------');
 
         try {
+            // Ensure API_URL is correctly defined (e.g., in .env or as a global const)
             const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
                 method: 'POST',
                 headers: {
@@ -204,8 +214,8 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
                 return;
             }
 
-            // Success Logic: This is where you would handle the token and user data
-            // For example: localStorage.setItem('token', data.token); onAuthSuccess(data.token);
+            // Success Logic: This is where you would call your state update function (e.g., onAuthSuccess)
+            // onAuthSuccess(data.token);
             
             setIsAuthLoading(false);
 
@@ -216,6 +226,7 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             setIsAuthLoading(false);
         }
     };
+
 
     
     const handlePageSwitch = (page) => {
