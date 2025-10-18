@@ -158,8 +158,7 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         // 1. Determine the payload based on the endpoint
         let payload;
         if (endpoint === 'login') {
-            // CRITICAL FIX: Only send email and password for login.
-            // This stops the backend from throwing a 400 error because the 'name' field is empty.
+            // Only send email and password for login.
             payload = {
                 email: authForm.email,
                 password: authForm.password,
@@ -169,7 +168,7 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             payload = authForm;
         }
         
-        // 2. Pre-Flight Client-Side Validation
+        // 2. Pre-Flight Client-Side Validation (kept for robustness)
         if (endpoint === 'register') {
             if (!payload.name || !payload.email || !payload.password) {
                 setAuthError('Name, Email, and Password are all required for registration.');
@@ -192,8 +191,9 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
         console.log('----------------------------------------------------');
 
         try {
-            // Ensure API_URL is correctly defined (e.g., in .env or as a global const)
-            const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
+            // *** CRITICAL CHANGE: Removed '/api' from the URL path. ***
+            // New URL format: ${API_URL}/auth/login or ${API_URL}/auth/register
+            const response = await fetch(`${API_URL}/auth/${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
                 return;
             }
 
-            // Success Logic: This is where you would call your state update function (e.g., onAuthSuccess)
+            // Success Logic 
             // onAuthSuccess(data.token);
             
             setIsAuthLoading(false);
@@ -226,7 +226,6 @@ const AuthScreen = ({ currentPage, setCurrentPage, onAuthSuccess, onAuthError })
             setIsAuthLoading(false);
         }
     };
-
 
     
     const handlePageSwitch = (page) => {
