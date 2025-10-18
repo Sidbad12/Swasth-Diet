@@ -2,10 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, MessageCircle, User, Scale, Target, Heart, ChevronRight, Menu, Plus, X, Calendar, TrendingUp, Book, Users, LogOut, Settings, Home, Award, Bell, Clock, Leaf } from 'lucide-react';
 
 // --- Global Configuration ---
-// Note: apiKey is deliberately left empty; the Canvas environment will provide it at runtime.
-const API_KEY = ""; 
-const GEMINI_MODEL = 'gemini-2.5-flash-preview-09-2025';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${API_KEY}`;
 const API_URL = 'https://swasth-diet.onrender.com'; 
 
 const indianRegions = [
@@ -18,105 +14,37 @@ const arrayToString = (value) => {
     return value || '';
 };
 
-// --- GEMINI API SERVICE LOGIC (Separated Function) ---
-
-/**
- * Handles the actual call to the Gemini API, including system prompt context, 
- * grounding, exponential backoff, and response parsing.
- * @param {string} userQuery The text query from the user.
- * @param {object} userData The current user's profile data for context.
- * @returns {Promise<{text: string, sources: Array<{uri: string, title: string}>}>}
- */
+// --- GEMINI API SERVICE LOGIC ---
 const callGeminiApi = async (userQuery, userData) => {
-    const profileContext = `
-        User Profile Summary:
-        Name: ${userData.name || 'N/A'}
-        Age: ${userData.age || 'N/A'}
-        Weight: ${userData.weight || 'N/A'} kg, Height: ${userData.height || 'N/A'} cm
-        Goal: ${userData.goal || 'General Health'}
-        Region: ${userData.region || 'All India'}
-        Diet Preference: ${userData.dietPreference || 'N/A'}
-        Health Issues: ${arrayToString(userData.healthIssues) || 'None'}
-        Allergies: ${arrayToString(userData.allergies) || 'None'}
-    `;
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`${API_URL}/api/gemini/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-auth-token': token,
+            },
+            body: JSON.stringify({ userQuery, userData })
+        });
 
-    const systemPrompt = `
-        You are the Swasth Bharat AI Nutrition Assistant. Your primary goal is to provide accurate, safe, and personalized dietary and nutrition advice tailored for the Indian population.
-
-        Knowledge Base: Your advice MUST be grounded in established Indian nutritional science, citing information relevant to the user's region, diet, and health condition. You MUST use the latest ICMR-NIN Dietary Guidelines for Indians (2024) and data from the Indian Food Composition Tables (IFCT 2017) as your foundation.
-
-        Persona: Be helpful, empathetic, and encouraging. Respond concisely and clearly. Incorporate Hindi greetings (like Namaste) or phrases when appropriate.
-
-        Instructions:
-        1. Use the provided Google Search tool (grounding) to access current, specific, and external data, especially when discussing specific food items, clinical recommendations, or updated guidelines.
-        2. When providing recipe ideas, prioritize ingredients common to the user's specified region (${userData.region || 'India'}).
-        3. Always explicitly consider the user's **Health Issues** and **Allergies** in your response.
-        4. Provide the answer in rich, conversational text format.
-
-        ${profileContext}
-    `;
-
-    const payload = {
-        contents: [{ parts: [{ text: userQuery }] }],
-        // MANDATORY: Use Google Search for grounding in up-to-date info
-        tools: [{ "google_search": {} }], 
-        systemInstruction: {
-            parts: [{ text: systemPrompt }]
-        },
-    };
-
-    const MAX_RETRIES = 5;
-    let botResponse = { 
-        text: "Sorry, I encountered a network error and could not reach the AI. Please check your connection and try again.", 
-        sources: [] 
-    };
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-        try {
-            const response = await fetch(GEMINI_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            const candidate = result.candidates?.[0];
-
-            if (candidate && candidate.content?.parts?.[0]?.text) {
-                const text = candidate.content.parts[0].text;
-                let sources = [];
-                const groundingMetadata = candidate.groundingMetadata;
-                
-                // Extracting citation sources from grounding metadata
-                if (groundingMetadata && groundingMetadata.groundingAttributions) {
-                    sources = groundingMetadata.groundingAttributions
-                        .map(attribution => ({
-                            uri: attribution.web?.uri,
-                            title: attribution.web?.title,
-                        }))
-                        .filter(source => source.uri && source.title); 
-                }
-                
-                return { text, sources }; // Success, return response
-            } else {
-                throw new Error('Invalid response structure from API. Response was likely blocked or incomplete.');
-            }
-        } catch (error) {
-            console.error(`Attempt ${i + 1} failed:`, error);
-            if (i === MAX_RETRIES - 1) {
-                return botResponse; // Last attempt failed, return default error
-            }
-            // Exponential backoff delay
-            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-            await new Promise(resolve => setTimeout(resolve, delay));
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const result = await response.json();
+        return result; // { text, sources }
+
+    } catch (error) {
+        console.error('Gemini API call failed:', error);
+        return { 
+            text: "Sorry, I encountered an error connecting to the AI assistant. Please try again.", 
+            sources: [] 
+        };
     }
-    return botResponse;
 };
+
+
 
 // --- AUTH SCREEN (Stable) ---
 
