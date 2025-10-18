@@ -883,9 +883,13 @@ const SwasthBharatApp = () => {
     fetchUserProfile(data.token);
   }, [fetchUserProfile]);
 
-  const handleAuthSuccess = (token) => {
-    // Legacy support - if called with just token string
-    onAuthSuccess({ token });
+  const handleAuthSuccess = (data) => {
+  // Handle both object with token or direct token string
+    if (typeof data === 'string') {
+      onAuthSuccess({ token: data });
+    } else {
+      onAuthSuccess(data);
+    }
   };
 
   const handleAuthError = (errorMsg) => {
@@ -1267,7 +1271,7 @@ const SwasthBharatApp = () => {
         <AuthScreen 
           currentPage={currentPage} 
           setCurrentPage={setCurrentPage} 
-          onAuthSuccess={handleAuthSuccess} 
+          onAuthSuccess={onAuthSuccess} 
           onAuthError={handleAuthError}
         />
       );
