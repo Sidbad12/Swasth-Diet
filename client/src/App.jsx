@@ -736,126 +736,6 @@ const SettingsSection = () => (
     </div>
 );
 
-// --- CHAT SECTION COMPONENT (Move outside SwasthBharatApp) ---
-const ChatSection = React.memo(({ 
-  chatMessages, 
-  chatInput, 
-  setChatInput, 
-  isTyping, 
-  onSendMessage,
-  onBack,
-  chatEndRef 
-}) => {
-  const handleInputChange = useCallback((e) => {
-    setChatInput(e.target.value);
-  }, [setChatInput]);
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isTyping && chatInput.trim()) {
-      e.preventDefault();
-      onSendMessage();
-    }
-  }, [isTyping, chatInput, onSendMessage]);
-
-  return (
-    <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      <div className="flex-shrink-0 flex items-center p-4 bg-white border-b shadow-sm">
-        <button onClick={onBack} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full mr-2">
-          <X size={24} />
-        </button>
-        <MessageCircle size={28} className="text-green-600 mr-3"/>
-        <h1 className="text-xl font-bold text-gray-800">AI Nutrition Chat</h1>
-      </div>
-      
-      <div className="flex-shrink-0 p-3 bg-blue-100 text-blue-800 text-xs text-center font-medium border-b border-blue-200">
-        Powered by Gemini: Advice grounded in <strong>Indian Food Composition Tables</strong> and <strong>ICMR-NIN Guidelines</strong>.
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ minHeight: '50vh' }}>
-        {chatMessages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div 
-              className={`max-w-xs sm:max-w-md p-3 rounded-xl shadow-md ${
-                msg.sender === 'user' 
-                  ? 'bg-green-500 text-white rounded-br-none' 
-                  : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{msg.text}</p>
-              
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-gray-200 text-xs text-gray-500">
-                  <p className="font-semibold mb-1">Sources:</p>
-                  <ul className="list-disc list-inside space-y-0.5 ml-2">
-                    {msg.sources.map((source, idx) => (
-                      <li key={idx} className="break-words">
-                        <a 
-                          href={source.uri} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="hover:underline text-blue-500"
-                        >
-                          {source.title || source.uri}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="max-w-xs sm:max-w-md p-3 rounded-xl bg-white text-gray-500 rounded-tl-none border border-gray-100 flex items-center">
-              <span className="typing-indicator"></span> 
-              <span className="ml-2">Typing...</span>
-            </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      <div className="flex-shrink-0 p-4 bg-white border-t">
-        <div className="flex items-center space-x-3">
-          <input
-            type="text"
-            placeholder={isTyping ? "Swasth Assistant is typing..." : "Ask about nutrition, recipes, diet plans..."}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 transition"
-            value={chatInput}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            disabled={isTyping}
-            autoComplete="off"
-          />
-          <button
-            onClick={onSendMessage}
-            disabled={!chatInput.trim() || isTyping}
-            className="bg-green-600 text-white p-3 rounded-full hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </div>
-      </div>
-
-      <style>{`
-        .typing-indicator {
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          margin-right: 2px;
-          border-radius: 50%;
-          background-color: #a0a0a0;
-          animation: bounce 1.4s infinite ease-in-out;
-        }
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1.0); }
-        }
-      `}</style>
-    </div>
-  );
-});
 
 
 // --- MAIN APPLICATION COMPONENT ---
@@ -1167,6 +1047,142 @@ const SwasthBharatApp = () => {
 
     </div>
   );
+
+  
+
+  const ChatSection = () => {
+  return (
+    <div className="flex flex-col h-screen bg-gray-50 font-sans">
+      <div className="flex-shrink-0 flex items-center p-4 bg-white border-b shadow-sm">
+        <button onClick={() => setCurrentPage('home')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full mr-2">
+          <X size={24} />
+        </button>
+        <MessageCircle size={28} className="text-green-600 mr-3"/>
+        <h1 className="text-xl font-bold text-gray-800">AI Nutrition Chat</h1>
+      </div>
+      
+      {/* Disclaimer */}
+      <div className="flex-shrink-0 p-3 bg-blue-100 text-blue-800 text-xs text-center font-medium border-b border-blue-200">
+        Powered by Gemini: Advice grounded in <strong>Indian Food Composition Tables</strong> and <strong>ICMR-NIN Guidelines</strong>.
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ minHeight: '50vh' }}>
+        {chatMessages.map((msg, index) => (
+          <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div 
+              className={`max-w-xs sm:max-w-md p-3 rounded-xl shadow-md ${
+                msg.sender === 'user' 
+                  ? 'bg-green-500 text-white rounded-br-none' 
+                  : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+              }`}
+            >
+              <p className="whitespace-pre-wrap">{msg.text}</p>
+              
+              {/* Citations/Sources */}
+              {msg.sources && msg.sources.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                      <p className="font-semibold mb-1">Sources:</p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-2">
+                          {msg.sources.map((source, idx) => (
+                              <li key={idx} className="break-words">
+                                  <a 
+                                      href={source.uri} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="hover:underline text-blue-500"
+                                  >
+                                      {source.title || source.uri}
+                                  </a>
+                              </li>
+                          ))}
+                      </ul>
+                  </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+           <div className="flex justify-start">
+             <div className="max-w-xs sm:max-w-md p-3 rounded-xl bg-white text-gray-500 rounded-tl-none border border-gray-100 flex items-center">
+               <span className="typing-indicator"></span> 
+               <span className="ml-2">Typing...</span>
+             </div>
+           </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      <div className="flex-shrink-0 p-4 bg-white border-t">
+        <div className="flex items-center space-x-3">
+          <input
+            key="chat-input"
+            type="text"
+            placeholder={isTyping ? "Swasth Assistant is typing..." : "Ask about nutrition, recipes, diet plans..."}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSend();
+              }
+            }}
+            disabled={isTyping}
+          />
+          <button
+            onClick={handleChatSend}
+            disabled={!chatInput.trim() || isTyping}
+            className="bg-green-600 text-white p-3 rounded-full hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      </div>
+
+      {/* CSS for typing animation */}
+      <style>{`
+        .typing-indicator {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          margin-right: 2px;
+          border-radius: 50%;
+          background-color: #a0a0a0;
+          animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator:nth-child(2) {
+          animation-delay: -1.1s;
+        }
+        .typing-indicator:nth-child(3) {
+          animation-delay: -0.7s;
+        }
+        @keyframes bounce {
+          0%, 80%, 100% {
+            transform: scale(0);
+          }
+          40% {
+            transform: scale(1.0);
+          }
+        }
+        .typing-indicator::after, .typing-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #a0a0a0;
+        }
+        .typing-indicator::before {
+             animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator::after {
+             animation: bounce 1.4s infinite ease-in-out;
+             animation-delay: -0.7s;
+        }
+      `}</style>
+    </div>
+  );
+};
 
   const renderContent = () => {
     switch (currentPage) {
